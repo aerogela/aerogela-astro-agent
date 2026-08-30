@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-# chrome-devtools MCP 启动器包装
+# chrome-devtools MCP 启动器包装（合并版：离线库注入 + 容器参数）
 # 作用:
-#   1. root 环境下 Chrome 必须加 --no-sandbox,否则进程立即退出(MCP 报 "Target closed")
-#   2. 沙盒无 X server,MCP 默认 headful 启动会失败,故强制注入 --headless=new
+#   1. 离线 .deb 解包的系统库通过 LD_LIBRARY_PATH 注入（沙盒 /usr 重置后 apt 不可用时）
+#   2. root 环境下 Chrome 必须加 --no-sandbox,否则进程立即退出(MCP 报 "Target closed")
+#   3. 沙盒无 X server,MCP 默认 headful 启动会失败,故强制注入 --headless=new
 # MCP 插件的启动参数不可改,所以在中间层统一补参数。
+export LD_LIBRARY_PATH="/opt/browser-libs/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH:-}"
 ARGS=("$@")
 HAS_HEADLESS=0
 for a in "${ARGS[@]}"; do
