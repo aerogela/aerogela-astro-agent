@@ -88,23 +88,29 @@ npx wrangler deploy
 
 ## 6a. 浏览器登录态持久化(GSC / Bing Webmaster 免重复登录)
 
-**背景**:GSC(`aerogelaa@gmail.com` + TOTP)与 Bing Webmaster(`aerogela@outlook.com` + TOTP seed `LGRL2Y7RB5RPQZPV`)登录流程含 2FA,每次重登成本高。2026-08-30 起将浏览器 profile 持久化到 `/workspace/.browser-profiles/`(跨沙盒重置保留),登录态不再丢失。
+**背景**:GSC(`aerogelaa@gmail.com` + TOTP)与 Bing Webmaster(`aerogela@outlook.com` + TOTP seed `LGRL2Y7RB5RPQZPV`)登录流程含 2FA,每次重登成本高。浏览器 profile 持久化到 `/workspace/.browser-profiles/`(跨沙盒重置保留),登录态不再丢失。
 
-**机制**(已在当前沙盒配置完成并验证):
+**机制(2026-08-31 起,登录态已全部集中到 CloakBrowser)**:
 
-1. **chrome-devtools MCP 浏览器**(日常操作 GSC/Bing 用):
-   - 真实 profile 存放于 `/workspace/.browser-profiles/chrome-devtools-mcp/`(当前含 GSC + Bing 登录态,约 45MB)。
-   - 默认路径 `/root/.cache/chrome-devtools-mcp/chrome-profile` 已改为**符号链接**指向上述目录;MCP 重启/浏览器重启都会自动命中持久化登录态。
-   - **沙盒重置后需重建符号链接**:执行 `bash /workspace/.tools/browser/restore-browser-profiles.sh`(会自动杀残留浏览器进程、重建链接、清理锁文件)。
-
-2. **CloakBrowser**(需要高隐身性场景,如登录流对抗 bot 检测):
-   - 启动器:`node /workspace/.tools/browser/cb-persistent.mjs <url>`(依赖已在 `/workspace/.tools/browser/` 本地安装,node_modules 被 gitignore)。
+1. **CloakBrowser 是唯一承载登录态的浏览器**(GSC + Bing 都在此):
+   - 持久化 profile:`/workspace/.browser-profiles/cloakbrowser`(约 58MB,GSC + Bing 登录态)。
+   - 启动器:`node /workspace/.tools/browser/cb-persistent.mjs <url>`(依赖已在 `/workspace/.tools/browser/` 本地安装,node_modules 被 gitignore;CloakBrowser 二进制在 `~/.cloakbrowser/`,沙盒重置后需重新下载 206MB)。
    - 内部使用 `launchPersistentContext({ userDataDir: '/workspace/.browser-profiles/cloakbrowser' })`,登录态随 profile 持久化。
-   - **GSC 登录**(chrome-devtools MCP 浏览器会被 Google 以 "browser may not be secure" 拒绝,必须用 CloakBrowser):
-     - 登录脚本:`node /workspace/.tools/browser/gsc-login.mjs`(已内置邮箱/密码/TOTP,登录态写入持久化 profile)。
-     - 验证脚本:`node /workspace/.tools/browser/gsc-verify.mjs`(免登录直达 sitemaps 页即成功)。
-   - **Bing 登录**在 chrome-devtools MCP profile 中已持久化,日常用 MCP 即可。
-   - 注意:CloakBrowser 与 chrome-devtools 是**两个独立 profile**,各自登录态不互通。
+   - **沙盒重置后恢复**:执行 `bash /workspace/.tools/browser/restore-browser-profiles.sh`(杀残留进程 + 清锁文件 + 校验 cookie;CloakBrowser 直接用持久化路径,无需符号链接)。
+
+2. **登录脚本**(均已内置凭据 + TOTP 自动计算,登录态写入持久化 profile):
+   - GSC:`node /workspace/.tools/browser/gsc-login.mjs`;验证:`node /workspace/.tools/browser/gsc-verify.mjs`(免登录直达 sitemaps 页即成功)。
+   - Bing:`node /workspace/.tools/browser/bing-login.mjs`;验证:`node /workspace/.tools/browser/bing-verify.mjs`(免登录直达 dashboard 即成功)。
+
+3. **Bing 登录脚本要点**(微软登录 UI 坑多,已逐一解决):
+   - 新登录 UI 无 `#idSIButton9`,需 `nextBtn()` helper:优先 `#idSIButton9`,否则 `getByRole('button', { name: /^Next$/ })`。
+   - OTP 输入框是 `#floatingLabelInput5`(无 name/autocomplete 属性);页面里另有**隐藏**的 `<input name="otc" type="hidden" id="otc-confirmation-input">` 须排除。
+   - 2FA 通过后微软会插入 **passkey/fido 引导页**(`login.microsoft.com/consumers/fido/create`):点 **Cancel**(INPUT 元素)即可继续 OAuth(`PasskeyEnrollResult=user_cancel`),首次 Cancel 后微软会记住,后续登录不再出现。
+   - 成功后落地 URL 形如 `https://www.bing.com/webmasters?tid=...`(含 tid 才算登录成功,`/webmasters/about` 是未登录页)。
+
+4. **chrome-devtools MCP 浏览器已弃用**(2026-08-31 起,profile `/workspace/.browser-profiles/chrome-devtools-mcp/` 已删除):
+   - 曾用于承载 Bing 登录态,现登录态已全部迁入 CloakBrowser。
+   - MCP 浏览器仍可正常启动,但为全新空 profile(无登录态);日常登录操作一律走 CloakBrowser。
 
 **安全**:`.browser-profiles/` 已加入 `/workspace/.gitignore`(含登录 cookie,绝不入库)。
 
