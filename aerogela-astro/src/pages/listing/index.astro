@@ -1,0 +1,126 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { SITE, breadcrumbSchema } from '../../lib/seo';
+import taxonomy from '../../data/taxonomy.json';
+
+const listings = (await getCollection('listings')).sort((a, b) =>
+  (b.data.date || '').localeCompare(a.data.date || '')
+);
+const categories = taxonomy.hp_listing_category || [];
+
+// 国家目录:只显示实际有收录的国家(与 /listing-location/ 生成规则一致)
+const counts = new Map();
+for (const l of listings) {
+  for (const loc of l.data.location || []) {
+    counts.set(loc, (counts.get(loc) || 0) + 1);
+  }
+}
+const countries = (taxonomy.hp_listing_location || [])
+  .map((c) => ({ ...c, n: counts.get(c.name) || 0 }))
+  .filter((c) => c.n > 0)
+  .sort((a, b) => b.n - a.n);
+
+const schema = [
+  breadcrumbSchema([
+    { name: 'Home', url: `${SITE.domain}/` },
+    { name: 'Suppliers', url: `${SITE.domain}/listing/` },
+  ]),
+];
+---
+
+<Base
+  title="Aerogel Suppliers Directory"
+  description={`Browse all aerogel manufacturers, suppliers and distributors — verified listings across ${countries.length} countries, filterable by category and region.`}
+  path="/listing/"
+  schema={schema}
+>
+  <div class="page-head">
+    <div class="wrap">
+      <span class="eyebrow">Directory</span>
+      <h1>Aerogel Suppliers &amp; Manufacturers</h1>
+      <p class="sub">
+        {listings.length} verified listings — from global blanket producers to regional
+        distributors, equipment and research partners. Every entry is reviewed against our
+        <a href="/how-listings-are-reviewed/">listing policy</a>.
+      </p>
+    </div>
+  </div>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="chips">
+        <a class="chip" href="/listing/">All · {listings.length}</a>
+        {categories.map((c) => <a class="chip" href={`/listing-category/${c.slug}/`}>{c.name}</a>)}
+      </div>
+
+      <div class="chips" style="margin-top:0.8rem;">
+        {countries.map((c) => (
+          <a class="chip" href={`/listing-location/${c.slug}/`}>{c.name} · {c.n}</a>
+        ))}
+      </div>
+
+      <div class="dir-tools">
+        <label class="dir-search">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.8-3.8"></path>
+          </svg>
+          <input id="dir-q" type="search" placeholder="Filter by company, product or country…" autocomplete="off" aria-label="Filter suppliers" />
+        </label>
+        <button id="dir-clear" class="dir-clear" type="button" hidden>Clear</button>
+        <span id="dir-count" class="dir-count" aria-live="polite">{listings.length} / {listings.length}</span>
+      </div>
+
+      <div class="cards dir-cards">
+        {listings.map((l, i) => (
+          <article
+            class="card"
+            data-search={[l.data.title, ...(l.data.location || []), ...(l.data.category || []), ...(l.data.main_products || [])].join(' ').toLowerCase()}
+          >
+            <span class="no">No. {String(listings.length - i).padStart(3, '0')}</span>
+            <h3><a href={`/listing/${l.data.slug}/`}>{l.data.title}</a></h3>
+            <span class="loc">{l.data.location?.[0] ?? 'Worldwide'}</span>
+            <div class="tags">
+              {(l.data.category ?? []).slice(0, 2).map((c) => <span class="tag">{c}</span>)}
+            </div>
+            {l.data.main_products?.length ? (
+              <p class="exc">{l.data.main_products.slice(0, 3).join(' · ')}</p>
+            ) : null}
+          </article>
+        ))}
+        <p id="dir-empty" class="dir-empty" hidden>No suppliers match — try a shorter term or clear the filter.</p>
+      </div>
+    </div>
+  </section>
+
+  <noscript><style>.dir-tools { display: none; }</style></noscript>
+  <script>
+    const q = document.getElementById('dir-q');
+    const cards = Array.from(document.querySelectorAll('.dir-cards .card'));
+    const count = document.getElementById('dir-count');
+    const clear = document.getElementById('dir-clear');
+    const empty = document.getElementById('dir-empty');
+    const total = cards.length;
+
+    function apply(value) {
+      const t = value.trim().toLowerCase();
+      let n = 0;
+      for (const c of cards) {
+        const hit = !t || (c.dataset.search || '').includes(t);
+        c.hidden = !hit;
+        if (hit) n++;
+      }
+      count.textContent = `${n} / ${total}`;
+      clear.hidden = !t;
+      empty.hidden = n !== 0;
+      const url = new URL(location.href);
+      if (t) url.searchParams.set('q', t); else url.searchParams.delete('q');
+      history.replaceState(null, '', url);
+    }
+
+    q.addEventListener('input', () => apply(q.value));
+    clear.addEventListener('click', () => { q.value = ''; apply(''); q.focus(); });
+    const init = new URLSearchParams(location.search).get('q');
+    if (init) { q.value = init; apply(init); }
+  </script>
+</Base>

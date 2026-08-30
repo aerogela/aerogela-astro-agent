@@ -1,0 +1,16 @@
+---
+import Base from '../layouts/Base.astro';
+
+const listings = 133;
+---
+
+<Base title="Page Not Found" description="The page you are looking for does not exist." path="/404" noindex>
+  <div class="nf wrap">
+    <div class="code">4<em>0</em>4</div>
+    <p>The page you are looking for does not exist or has been moved during migration.</p>
+    <div class="cta-row">
+      <a class="btn btn-solid" href="/">Back to home <span class="arr">→</span></a>
+      <a class="btn btn-ghost" href="/listing/">Browse {listings} suppliers</a>
+    </div>
+  </div>
+</Base>

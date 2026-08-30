@@ -1,0 +1,160 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import { breadcrumbSchema } from '../lib/seo';
+
+const [listings, posts] = await Promise.all([getCollection('listings'), getCollection('posts')]);
+
+const schema = [
+  breadcrumbSchema([
+    { name: 'Home', url: 'https://aerogela.com/' },
+    { name: 'Search', url: 'https://aerogela.com/search/' },
+  ]),
+];
+
+const POPULAR = [
+  'aerogel blanket',
+  'EV battery',
+  'cryogenic',
+  'price',
+  'fire protection',
+  'thermal conductivity',
+];
+---
+
+<Base
+  title="Search"
+  description={`Search aerogela — ${listings.length} supplier listings, ${posts.length} knowledge articles and technical pages.`}
+  path="/search/"
+  noindex
+  schema={schema}
+>
+  <div class="page-head">
+    <div class="wrap">
+      <span class="eyebrow">Site index</span>
+      <h1>Search the directory</h1>
+      <p class="sub">
+        Full-text search across all supplier listings, technical articles and reference pages.
+        Filter results by type, category and country.
+      </p>
+    </div>
+  </div>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="search-hero">
+        <div id="search"></div>
+
+        <div class="search-chips" id="search-chips">
+          <span class="sc-label">Popular</span>
+          {POPULAR.map((t) => (
+            <button class="chip" type="button" data-q={t}>{t}</button>
+          ))}
+        </div>
+
+        <p class="search-meta">
+          {listings.length} supplier listings · {posts.length} knowledge articles · index rebuilt
+          on every deploy · press <kbd>/</kbd> to focus
+        </p>
+
+        <noscript>
+          <p style="font-family:var(--font-mono);font-size:0.8rem;color:var(--muted);">
+            Search requires JavaScript. Browse the <a href="/listing/">supplier directory</a> or
+            <a href="/blog/">knowledge base</a> instead.
+          </p>
+        </noscript>
+      </div>
+    </div>
+  </section>
+
+  <script is:inline>
+    // Pagefind 1.5 的 pagefind-ui.js 是 IIFE 构建,挂载到 window.PagefindUI
+    // (不是 ES module 导出),因此不能从 import() 解构,需读全局
+    import('/pagefind/pagefind-ui.js')
+      .then(() => {
+        if (typeof window.PagefindUI !== 'function') throw new Error('PagefindUI missing');
+        const ui = new window.PagefindUI({
+          element: '#search',
+          showSubResults: true,
+          showImages: false,
+          filters: {
+            type: 'Type',
+            category: 'Category',
+            location: 'Location',
+          },
+          translations: {
+            placeholder: 'Search suppliers, materials, guides…',
+            clear_search: 'Clear',
+            load_more: 'Load more results',
+            search_label: 'Search this site',
+            zero_results: 'No results for “[SEARCH_TERM]” — try a shorter term, or browse the directory instead.',
+            many_results: '[COUNT] results for “[SEARCH_TERM]”',
+            one_result: '[COUNT] result for “[SEARCH_TERM]”',
+            searching: 'Searching “[SEARCH_TERM]”…',
+          },
+        });
+        // ?q= 深链接:自动填入并执行搜索(可分享、可从其它页面带词跳转)
+        const q = new URLSearchParams(window.location.search).get('q');
+        if (q) ui.triggerSearch(q);
+
+        // 把热门词与统计行移入表单、插到结果抽屉之前
+        // (结果在 #search 容器内渲染,不移动的话 chips/meta 会被推到全部结果之后)
+        const form = document.querySelector('.pagefind-ui__form');
+        const drawer = document.querySelector('.pagefind-ui__drawer');
+        const chips = document.getElementById('search-chips');
+        const meta = document.querySelector('.search-meta');
+        if (form && drawer && chips && meta) {
+          form.insertBefore(meta, drawer);
+          form.insertBefore(chips, meta);
+          // svelte 重渲染可能移除外来节点:每次搜索后检查并归位
+          const keep = () => {
+            if (chips.parentElement !== form) {
+              form.insertBefore(meta, drawer);
+              form.insertBefore(chips, meta);
+            }
+          };
+          document.querySelector('.pagefind-ui__search-input')?.addEventListener('input', keep);
+          window.setTimeout(keep, 300);
+        }
+
+        // 空查询时隐藏 Clear(pagefind 原生始终显示,空字段没有可清除的内容)。
+        // 监听挂在容器上冒泡捕获 input 事件,svelte 重渲染替换输入框后依然有效
+        const root = document.querySelector('.pagefind-ui');
+        const syncClear = () => {
+          const input = document.querySelector('.pagefind-ui__search-input');
+          root?.classList.toggle('has-query', !!(input && input.value.trim()));
+        };
+        document.getElementById('search')?.addEventListener('input', syncClear);
+        // pagefind 的 Clear 点击是编程清空,不触发 input 事件,需在点击后再同步
+        document.getElementById('search')?.addEventListener('click', (e) => {
+          if (e.target instanceof Element && e.target.closest('.pagefind-ui__search-clear')) {
+            window.setTimeout(syncClear, 50);
+          }
+        });
+        syncClear();
+        window.setTimeout(syncClear, 300); // ?q= 深链填充后再同步一次
+
+        // 热门搜索 chips:一键触发查询
+        document.querySelectorAll('#search-chips [data-q]').forEach((c) => {
+          c.addEventListener('click', () => ui.triggerSearch(c.dataset.q));
+        });
+
+        // "/" 快捷键聚焦搜索框(输入态除外)
+        document.addEventListener('keydown', (e) => {
+          const tag = (document.activeElement && document.activeElement.tagName) || '';
+          if (e.key === '/' && !/^(input|textarea|select)$/i.test(tag)) {
+            e.preventDefault();
+            const input = document.querySelector('.pagefind-ui__search-input');
+            if (input) input.focus();
+          }
+        });
+      })
+      .catch(() => {
+        const el = document.querySelector('#search');
+        if (el) {
+          el.innerHTML =
+            '<p style="font-family:var(--font-mono);font-size:0.8rem;color:var(--muted);">The search index is generated at build time — run <code>npm run build</code> and preview the built site.</p>';
+        }
+      });
+  </script>
+</Base>

@@ -1,0 +1,18 @@
+# 凭据 — 绝不入库
+.credentials/id_ed25519
+.credentials/cloudflare-token.txt
+**/id_ed25519
+**/cloudflare-token.txt
+
+# 浏览器二进制(>100MB,GitHub 拒绝或被克隆拖慢),按 .tools/README.md 重新下载
+.tools/browser/chrome-linux64/
+deliverables.html
+
+# 构建产物 / 依赖 / 本地缓存
+node_modules/
+dist/
+.astro/
+.package/
+.wrangler/
+*.log
+.DS_Store

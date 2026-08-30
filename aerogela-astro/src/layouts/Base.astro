@@ -1,0 +1,224 @@
+---
+import '../styles/global.css';
+import { SITE, pageTitle, canonical } from '../lib/seo';
+
+interface Props {
+  title?: string;
+  description?: string;
+  path: string;
+  ogImage?: string;
+  noindex?: boolean;
+  schema?: Record<string, any>[];
+}
+
+const { title, description = SITE.description, path, ogImage = '/og-default.png', noindex = false, schema = [] } =
+  Astro.props;
+
+const fullTitle = pageTitle(title);
+const canon = canonical(path);
+const graph = [
+  { '@type': 'Organization', '@id': `${SITE.domain}/#org`, name: SITE.name, url: SITE.domain, description: SITE.description },
+  ...schema,
+];
+const jsonLd = JSON.stringify({ '@context': 'https://schema.org', '@graph': graph });
+const year = new Date().getFullYear();
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    {/* noindex 页不输出 canonical(Google 视 noindex+canonical 为冲突信号) */}
+    {!noindex && <link rel="canonical" href={canon} />}
+    {noindex && <meta name="robots" content="noindex, follow" />}
+    <meta property="og:site_name" content={SITE.name} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canon} />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content={new URL(ogImage, SITE.domain).href} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={fullTitle} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#f4f3ee" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="alternate" type="application/rss+xml" title="aerogela — knowledge base" href="/rss.xml" />
+    <link
+      rel="preload"
+      href="/fonts/archivo-400_700-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/bricolagegrotesque-600_800-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <script type="application/ld+json" set:html={jsonLd} />
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <div class="topbar">
+      <div class="wrap">
+        <span class="fact">The aerogel industry directory<em></em></span>
+        <span class="fact">
+          <a href="/submit-a-listing/">Submit a listing</a><span class="sep">/</span>
+          <a href="/how-listings-are-reviewed/">Review policy</a>
+        </span>
+      </div>
+    </div>
+
+    <header class="site-header">
+      <div class="wrap sitebar">
+        <a class="brand" href="/">
+          <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+            <rect x="1.5" y="8.5" width="16" height="16" rx="3" fill="#0d7684" opacity="0.25" />
+            <rect x="5" y="5" width="16" height="16" rx="3" fill="#0d7684" opacity="0.5" />
+            <rect x="8.5" y="1.5" width="16" height="16" rx="3" fill="#0d7684" />
+          </svg>
+          aerogela
+        </a>
+        <nav class="nav" aria-label="Primary">
+          <a href="/listing/">Suppliers</a>
+          <a href="/blog/">Knowledge</a>
+          <a href="/search/">Search</a>
+          <a href="/about-aerogela/">About</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main-content">
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <div class="foot-grid">
+          <div>
+            <div class="foot-brand">
+              <svg width="22" height="22" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+                <rect x="1.5" y="8.5" width="16" height="16" rx="3" fill="#0d7684" opacity="0.25" />
+                <rect x="5" y="5" width="16" height="16" rx="3" fill="#0d7684" opacity="0.5" />
+                <rect x="8.5" y="1.5" width="16" height="16" rx="3" fill="#0d7684" />
+              </svg>
+              aerogela
+            </div>
+            <p class="foot-about">
+              Global directory of aerogel manufacturers, suppliers and distributors — verified
+              listings, technical knowledge, and sourcing intelligence.
+            </p>
+          </div>
+          <div class="foot-col">
+            <h4>Directory</h4>
+            <ul>
+              <li><a href="/listing/">All suppliers</a></li>
+              <li><a href="/listing-category/aerogel-producers/">Producers</a></li>
+              <li><a href="/listing-category/distributors/">Distributors</a></li>
+              <li><a href="/listing-category/equipment-materials/">Equipment &amp; materials</a></li>
+              <li><a href="/listing-category/research-services/">Research &amp; services</a></li>
+            </ul>
+          </div>
+          <div class="foot-col">
+            <h4>Knowledge</h4>
+            <ul>
+              <li><a href="/blog/">All articles</a></li>
+              <li><a href="/blog/what-is-aerogel-insulation/">What is aerogel insulation</a></li>
+              <li><a href="/blog/how-to-choose-aerogel-suppliers/">Choosing suppliers</a></li>
+              <li><a href="/search/">Search</a></li>
+            </ul>
+          </div>
+          <div class="foot-col">
+            <h4>Company</h4>
+            <ul>
+              <li><a href="/about-aerogela/">About</a></li>
+              <li><a href="/verification-policy/">Verification policy</a></li>
+              <li><a href="/submit-a-listing/">Submit a listing</a></li>
+              <li><a href="/claim-listing/">Claim a listing</a></li>
+              <li><a href="/contact-supplier/">Contact suppliers</a></li>
+              <li><a href="/editorial-policy/">Editorial policy</a></li>
+              <li><a href="/privacy-policy-2/">Privacy</a></li>
+              <li><a href="/terms-of-use/">Terms</a></li>
+            </ul>
+          </div>
+        </div>
+
+        {/* 内链枢纽:采购指南链接(原 WP 站遗留页面,恢复内链权重流动) */}
+        <div class="foot-hub">
+          <div class="hub-col">
+            <h4>Aerogel suppliers by country</h4>
+            <ul>
+              <li><a href="/listing-location/china/">China</a></li>
+              <li><a href="/listing-location/usa/">United States</a></li>
+              <li><a href="/listing-location/germany/">Germany</a></li>
+              <li><a href="/listing-location/united-kingdom/">United Kingdom</a></li>
+              <li><a href="/listing-location/canada/">Canada</a></li>
+              <li><a href="/listing-location/netherlands/">Netherlands</a></li>
+              <li><a href="/listing-location/japan/">Japan</a></li>
+              <li><a href="/listing-location/france/">France</a></li>
+              <li><a href="/listing-location/belgium/">Belgium</a></li>
+            </ul>
+          </div>
+          <div class="hub-col">
+            <h4>Distributor directories</h4>
+            <ul>
+              <li><a href="/belgium-aerogel-distributors-directory/">Belgium distributors</a></li>
+              <li><a href="/canada-aerogel-distributors-directory/">Canada distributors</a></li>
+              <li><a href="/france-aerogel-companies-directory/">France companies</a></li>
+              <li><a href="/germany-aerogel-distributors-directory/">Germany distributors</a></li>
+              <li><a href="/netherlands-aerogel-distributors-directory/">Netherlands distributors</a></li>
+              <li><a href="/uk-aerogel-distributors-directory/">UK distributors</a></li>
+              <li><a href="/usa-aerogel-distributors-directory/">USA distributors</a></li>
+            </ul>
+          </div>
+          <div class="hub-col">
+            <h4>China by application</h4>
+            <ul>
+              <li><a href="/china-aerogel-blanket-suppliers/">Blanket suppliers</a></li>
+              <li><a href="/china-aerogel-powder-granules-suppliers/">Powder &amp; granules</a></li>
+              <li><a href="/china-cryogenic-aerogel-companies/">Cryogenic</a></li>
+              <li><a href="/china-ev-battery-aerogel-companies/">EV battery</a></li>
+              <li><a href="/china-fire-protection-aerogel-companies/">Fire protection</a></li>
+              <li><a href="/china-industrial-insulation-aerogel-companies/">Industrial insulation</a></li>
+            </ul>
+          </div>
+          <div class="hub-col">
+            <h4>By application &amp; product</h4>
+            <ul>
+              <li><a href="/ev-battery-aerogel-companies/">EV battery companies</a></li>
+              <li><a href="/building-construction-aerogel-companies/">Building &amp; construction</a></li>
+              <li><a href="/industrial-insulation-aerogel-companies/">Industrial insulation</a></li>
+              <li><a href="/lng-cryogenic-aerogel-companies/">LNG &amp; cryogenic</a></li>
+              <li><a href="/aerogel-blanket-suppliers/">Aerogel blankets</a></li>
+              <li><a href="/aerogel-board-panel-suppliers/">Boards &amp; panels</a></li>
+              <li><a href="/aerogel-powder-granules-suppliers/">Powder &amp; granules</a></li>
+              <li><a href="/battery-thermal-pad-suppliers/">Battery thermal pads</a></li>
+            </ul>
+          </div>
+          <div class="hub-col">
+            <h4>Services &amp; equipment</h4>
+            <ul>
+              <li><a href="/aerogel-rd-testing-services/">R&amp;D and testing</a></li>
+              <li><a href="/testing-characterization-aerogel-services/">Testing &amp; characterization</a></li>
+              <li><a href="/materials-research-development-aerogel-services/">Materials research</a></li>
+              <li><a href="/laboratory-equipment-instruments-suppliers/">Lab instruments</a></li>
+              <li><a href="/process-equipment-pilot-systems-suppliers/">Process equipment</a></li>
+              <li><a href="/compare-listings/">Compare listings</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="foot-base">
+          <span>© {year} aerogela.com — aerogel industry directory</span>
+          <span>Built as a static site · aerogel-insulated 🧊</span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

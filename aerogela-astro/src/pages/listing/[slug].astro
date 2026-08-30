@@ -1,0 +1,123 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import {
+  SITE, canonical, htmlToText, listingSchema, breadcrumbSchema,
+} from '../../lib/seo';
+
+export async function getStaticPaths() {
+  const listings = await getCollection('listings');
+  return listings.map((l) => ({ params: { slug: l.data.slug }, props: { l } }));
+}
+
+const { l } = Astro.props;
+const e = l.data;
+const path = `/listing/${e.slug}/`;
+const url = canonical(path);
+const desc = e.excerpt || htmlToText(e.content);
+
+// 目录站外链策略统一:正文中的供应商官网链接补 nofollow(与侧栏一致,
+// 避免被搜索引擎视为链接农场;博客 DOI 引用链接保持 follow 不受影响)
+const contentHtml = e.content.replace(
+  /<a\s([^>]*href="https?:\/\/(?!aerogela\.com)[^"]*"[^>]*)>/gi,
+  (m, attrs) => {
+    if (/nofollow/i.test(attrs)) return m;
+    if (/rel="[^"]*"/i.test(attrs)) return m.replace(/rel="([^"]*)"/i, 'rel="nofollow $1"');
+    return `<a ${attrs} rel="nofollow noopener">`;
+  }
+);
+
+const schema = [
+  listingSchema(e, url),
+  breadcrumbSchema([
+    { name: 'Home', url: `${SITE.domain}/` },
+    { name: 'Suppliers', url: `${SITE.domain}/listing/` },
+    { name: e.title, url },
+  ]),
+];
+---
+
+<Base title={e.title} description={desc} path={path} schema={schema}>
+  <div class="page-head">
+    <div class="wrap">
+      <div class="crumbs">
+        <a href="/">Home</a><span class="crumb-sep">/</span><a href="/listing/">Suppliers</a><span class="crumb-sep">/</span>{e.title}
+      </div>
+      <span class="eyebrow">Supplier datasheet</span>
+      <h1>{e.title}</h1>
+      {e.review_status === 'reviewed' && <span class="verified">Reviewed listing</span>}
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="sheet">
+      <div class="sheet-main">
+        <article data-pagefind-body data-pagefind-filter="type:Supplier">
+          <div class="art-meta">
+            {e.location?.length && <span class="dt">{e.location.join(', ')}</span>}
+            {e.category?.length && <span class="rd">{e.category.join(' · ')}</span>}
+          </div>
+          <span style="display:none;">
+            {e.location?.map((l) => <span data-pagefind-filter="location">{l}</span>)}
+            {e.category?.map((c) => <span data-pagefind-filter="category">{c}</span>)}
+          </span>
+          <div class="prose" set:html={contentHtml} />
+        </article>
+      </div>
+
+      <aside class="sheet-aside">
+        <div class="meta-card">
+          <div class="mc-head"><span>Company profile</span><span class="dot"></span></div>
+          {e.website && (
+            <div class="mc-row">
+              <div class="k">Website</div>
+              <div class="v"><a href={e.website} rel="nofollow noopener" target="_blank">{e.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')} ↗</a></div>
+            </div>
+          )}
+          {e.location?.length ? (
+            <div class="mc-row">
+              <div class="k">Location</div>
+              <div class="v">{e.location.join(', ')}</div>
+            </div>
+          ) : null}
+          {e.category?.length ? (
+            <div class="mc-row">
+              <div class="k">Category</div>
+              <div class="v">{e.category.join(', ')}</div>
+            </div>
+          ) : null}
+          {e.main_products?.length ? (
+            <div class="mc-row">
+              <div class="k">Main products</div>
+              <div class="v">{e.main_products.join(', ')}</div>
+            </div>
+          ) : null}
+          {e.application_fields?.length ? (
+            <div class="mc-row">
+              <div class="k">Applications</div>
+              <div class="v">{e.application_fields.join(', ')}</div>
+            </div>
+          ) : null}
+          {e.certifications ? (
+            <div class="mc-row">
+              <div class="k">Certifications</div>
+              <div class="v">{e.certifications}</div>
+            </div>
+          ) : null}
+          <div class="mc-row">
+            <div class="k">Listing data</div>
+            <div class="v" style="font-family:var(--font-mono);font-size:0.8rem;color:var(--muted);">
+              ID {e.slug}<br />Added {new Date(e.date).toISOString().slice(0, 10)}
+            </div>
+          </div>
+        </div>
+
+        <p style="margin-top:1rem;font-size:0.82rem;color:var(--muted);line-height:1.6;">
+          Listing information is provided for sourcing research. Verify specifications and
+          certifications directly with the supplier. See our
+          <a href="/verification-policy/">verification policy</a>.
+        </p>
+      </aside>
+    </div>
+  </div>
+</Base>
