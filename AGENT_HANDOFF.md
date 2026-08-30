@@ -98,9 +98,10 @@ npx wrangler deploy
    - 内部使用 `launchPersistentContext({ userDataDir: '/workspace/.browser-profiles/cloakbrowser' })`,登录态随 profile 持久化。
    - **沙盒重置后恢复**:执行 `bash /workspace/.tools/browser/restore-browser-profiles.sh`(杀残留进程 + 清锁文件 + 校验 cookie;CloakBrowser 直接用持久化路径,无需符号链接)。
 
-2. **登录脚本**(均已内置凭据 + TOTP 自动计算,登录态写入持久化 profile):
+2. **登录脚本**(均已内置凭据 + TOTP 自动计算,登录态写入持久化 profile;**已内置 `LD_LIBRARY_PATH` 自动注入**,沙盒重置后无需 shell 层环境变量即可裸跑):
    - GSC:`node /workspace/.tools/browser/gsc-login.mjs`;验证:`node /workspace/.tools/browser/gsc-verify.mjs`(免登录直达 sitemaps 页即成功)。
    - Bing:`node /workspace/.tools/browser/bing-login.mjs`;验证:`node /workspace/.tools/browser/bing-verify.mjs`(免登录直达 dashboard 即成功)。
+   - **依赖注入说明**:CloakBrowser 依赖 libatk/libnss3 等系统动态库,沙盒重置后系统库丢失会报 `cannot open shared object file: libatk-1.0.so.0`。各脚本在 launch 前自动把 `/workspace/.tools/browser/browser-libs/usr/lib/x86_64-linux-gnu` 注入 `process.env.LD_LIBRARY_PATH`(Chrome 子进程继承),该离线库随 workspace 持久化、跨沙盒重置可用。
 
 3. **Bing 登录脚本要点**(微软登录 UI 坑多,已逐一解决):
    - 新登录 UI 无 `#idSIButton9`,需 `nextBtn()` helper:优先 `#idSIButton9`,否则 `getByRole('button', { name: /^Next$/ })`。

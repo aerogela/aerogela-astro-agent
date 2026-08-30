@@ -6,6 +6,13 @@
  */
 import { launchPersistentContext } from 'cloakbrowser';
 
+// 沙盒重置后系统动态库(libatk 等)会丢失,注入 workspace 内离线库。
+// 必须在浏览器 launch 前设置,Chrome 子进程继承本进程 env;注入后可裸跑本脚本。
+process.env.LD_LIBRARY_PATH = [
+  '/workspace/.tools/browser/browser-libs/usr/lib/x86_64-linux-gnu',
+  process.env.LD_LIBRARY_PATH,
+].filter(Boolean).join(':');
+
 const PROFILE_DIR = '/workspace/.browser-profiles/cloakbrowser';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
