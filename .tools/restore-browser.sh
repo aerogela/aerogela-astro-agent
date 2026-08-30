@@ -33,14 +33,26 @@ if [ -n "$MISSING" ]; then
     echo "→ apt 失败,使用本地 .deb 离线解包..."
     mkdir -p /opt/browser-libs
     for d in "$DEB_DIR"/*.deb; do dpkg -x "$d" /opt/browser-libs; done
-    # 离线库通过包装脚本注入 LD_LIBRARY_PATH
-    cat > /workspace/.tools/browser/chrome-launch.sh <<'EOF'
+    # 离线库通过包装脚本注入 LD_LIBRARY_PATH。
+    # 注意:不要覆盖合并版 chrome-launch.sh(含 --no-sandbox/--headless=new 等容器参数,
+    # 覆盖会导致 root 下浏览器秒退,见 commit 89c3720)。仅当合并版不存在时才生成完整版。
+    if [ ! -f /workspace/.tools/browser/chrome-launch.sh ]; then
+      cat > /workspace/.tools/browser/chrome-launch.sh <<'EOF'
 #!/usr/bin/env bash
 export LD_LIBRARY_PATH="/opt/browser-libs/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH:-}"
-exec /workspace/.tools/browser/chrome-linux64/chrome "$@"
+ARGS=("$@")
+HAS_HEADLESS=0
+for a in "${ARGS[@]}"; do
+  case "$a" in --headless*) HAS_HEADLESS=1;; esac
+done
+EXTRA=(--no-sandbox --disable-gpu --disable-dev-shm-usage --no-first-run --no-default-browser-check)
+[ "$HAS_HEADLESS" -eq 0 ] && EXTRA+=(--headless=new)
+exec /workspace/.tools/browser/chrome-linux64/chrome "${EXTRA[@]}" "${ARGS[@]}"
 EOF
-    chmod +x /workspace/.tools/browser/chrome-launch.sh
-    ln -sf /workspace/.tools/browser/chrome-launch.sh /opt/google/chrome/chrome 2>/dev/null
+      chmod +x /workspace/.tools/browser/chrome-launch.sh
+    else
+      echo "→ 保留现有合并版 chrome-launch.sh(含容器参数)"
+    fi
   fi
 fi
 
