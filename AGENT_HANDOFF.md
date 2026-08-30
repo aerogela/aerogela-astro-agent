@@ -67,16 +67,23 @@ npm run preview            # 预览构建产物
 
 **业务数据**:`src/data/` 含 `taxonomy.json`(类别/国家体系)、`country-intro.json`、`redirects.json`(旧→新 URL 映射,合并自 WXR × GSC × Ahrefs)。
 
-> 若需查看完整源码:仓库内 `aerogela-astro/src` 为一次干净快照,已是完整可构建的源。
+> `aerogela-astro/` 已于 2026-08-30 升级为 `aerogela/aerogela-astro` 的正式 git 克隆(快照与远端逐字节比对一致后移入 `.git`),`node_modules/` 与 `dist/` 保留在本地(已被 gitignore 排除)。
 
-## 5. 部署
+## 5. 部署(推荐:Git 集成自动部署)
 
-Cloudflare Pages/Workers 部署 `dist/` 产物,`_redirects` / `_headers` 随 `dist/` 原生生效。常见操作:
+**`aerogela/aerogela-astro` 仓库已绑定 Cloudflare Workers Builds(Git 集成):推送到 `main` 即自动构建部署**,无需本地 Token。构建命令 `npm run build`,部署命令 `npx wrangler deploy`(配置见 `wrangler.toml` 注释),`_redirects` / `_headers` 随 `dist/` 原生生效。
+
+```bash
+cd aerogela-astro   # 本目录已是该仓库的正式克隆(origin = git@github.com:aerogela/aerogela-astro.git)
+git add -A && git commit -m "..." && git push origin main   # 推送即触发 Cloudflare 自动部署
+```
+
+备用方案(手动部署,需 Cloudflare API Token,见 §7):
 
 ```bash
 cd aerogela-astro
 npm run build
-npx wrangler deploy        # 需要 Cloudflare Token(见 §7)
+npx wrangler deploy
 ```
 
 ## 6. 数据与资产说明
@@ -91,10 +98,11 @@ npx wrangler deploy        # 需要 Cloudflare Token(见 §7)
 - 原值仅存在于 **原沙盒** `/workspace/.credentials/` 内(该目录跨沙盒重置保留,已由 README 验证)。私钥/Tokent 不入 git,防止仓库泄露即密钥泄露。
 - 若丢失原沙盒:需向仓库/账号所有者(Aerogela org,SSH 身份 `trae-deploy@aerogela`)重新索要私钥与 Token 后,再运行 `restore-credentials.sh`。
 - 推送到 aerogela 名下仓库走 SSH:`git@github.com:aerogela/aerogela-*.git`(经 HTTP 代理)。
+- **2026-08-30 密钥轮换记录**:原沙盒丢失导致原私钥失效,已生成新密钥对(指纹 `SHA256:oYGEu5miDF0A064hiZWaqIGzVBafBGeskYRvjBlNLM`,身份 `trae-deploy@aerogela`),新公钥已入库,新私钥存当前沙盒 `/workspace/.credentials/id_ed25519`(gitignore 排除)。Cloudflare Token 未恢复,但日常发布走 §5 的 Git 自动部署,不依赖 Token。
 
 ## 8. 当前状态与建议的下一步
 
-- 源工程 `aerogela-astro/` 工作树干净,`main` 与 `origin/main` 一致。
+- 源工程 `aerogela-astro/` 已是正式克隆,工作树干净,`main` 与 `origin/main`(cdcb897)一致,推送即自动部署。
 - 搜索页 UI、移动端适配等已迭代完成(见 `src/pages/search.astro`、`src/styles/global.css`)。
 - 建议的继续方向(示例,按需取舍):扩展/校对 listings 数据、新增 SEO 收录页、优化搜索相关性与分面筛选、监控 sitemap/重定向覆盖、站点性能与 Core Web Vitals 巡检。
 

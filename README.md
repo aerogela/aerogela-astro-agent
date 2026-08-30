@@ -15,7 +15,7 @@
 
 | 路径 | 内容 |
 | --- | --- |
-| `aerogela-astro/` | 网站源码快照(干净,不含 `node_modules`/`dist`/`.git`) |
+| `aerogela-astro/` | 网站源码,已升级为 `aerogela/aerogela-astro` 正式克隆(推送 `main` 即触发 Cloudflare 自动部署) |
 | `.tools/` | 沙盒环境恢复工具脚本与系统库 `.deb` 备份 |
 | `.credentials/` | 公钥 + 凭据恢复脚本(**不含私钥/Token**,见安全说明) |
 | `.uploads/` | 迁移期的 CSV / ZIP / WordPress XML 原始数据 |
