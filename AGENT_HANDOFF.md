@@ -100,7 +100,11 @@ npx wrangler deploy
 2. **CloakBrowser**(需要高隐身性场景,如登录流对抗 bot 检测):
    - 启动器:`node /workspace/.tools/browser/cb-persistent.mjs <url>`(依赖已在 `/workspace/.tools/browser/` 本地安装,node_modules 被 gitignore)。
    - 内部使用 `launchPersistentContext({ userDataDir: '/workspace/.browser-profiles/cloakbrowser' })`,登录态随 profile 持久化。
-   - 注意:CloakBrowser 与 chrome-devtools 是**两个独立 profile**,各自登录态不互通;需在 CloakBrowser 内再登录一次,之后便持久有效。
+   - **GSC 登录**(chrome-devtools MCP 浏览器会被 Google 以 "browser may not be secure" 拒绝,必须用 CloakBrowser):
+     - 登录脚本:`node /workspace/.tools/browser/gsc-login.mjs`(已内置邮箱/密码/TOTP,登录态写入持久化 profile)。
+     - 验证脚本:`node /workspace/.tools/browser/gsc-verify.mjs`(免登录直达 sitemaps 页即成功)。
+   - **Bing 登录**在 chrome-devtools MCP profile 中已持久化,日常用 MCP 即可。
+   - 注意:CloakBrowser 与 chrome-devtools 是**两个独立 profile**,各自登录态不互通。
 
 **安全**:`.browser-profiles/` 已加入 `/workspace/.gitignore`(含登录 cookie,绝不入库)。
 
