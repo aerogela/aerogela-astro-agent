@@ -86,6 +86,24 @@ npm run build
 npx wrangler deploy
 ```
 
+## 6a. 浏览器登录态持久化(GSC / Bing Webmaster 免重复登录)
+
+**背景**:GSC(`aerogelaa@gmail.com` + TOTP)与 Bing Webmaster(`aerogela@outlook.com` + TOTP seed `LGRL2Y7RB5RPQZPV`)登录流程含 2FA,每次重登成本高。2026-08-30 起将浏览器 profile 持久化到 `/workspace/.browser-profiles/`(跨沙盒重置保留),登录态不再丢失。
+
+**机制**(已在当前沙盒配置完成并验证):
+
+1. **chrome-devtools MCP 浏览器**(日常操作 GSC/Bing 用):
+   - 真实 profile 存放于 `/workspace/.browser-profiles/chrome-devtools-mcp/`(当前含 GSC + Bing 登录态,约 45MB)。
+   - 默认路径 `/root/.cache/chrome-devtools-mcp/chrome-profile` 已改为**符号链接**指向上述目录;MCP 重启/浏览器重启都会自动命中持久化登录态。
+   - **沙盒重置后需重建符号链接**:执行 `bash /workspace/.tools/browser/restore-browser-profiles.sh`(会自动杀残留浏览器进程、重建链接、清理锁文件)。
+
+2. **CloakBrowser**(需要高隐身性场景,如登录流对抗 bot 检测):
+   - 启动器:`node /workspace/.tools/browser/cb-persistent.mjs <url>`(依赖已在 `/workspace/.tools/browser/` 本地安装,node_modules 被 gitignore)。
+   - 内部使用 `launchPersistentContext({ userDataDir: '/workspace/.browser-profiles/cloakbrowser' })`,登录态随 profile 持久化。
+   - 注意:CloakBrowser 与 chrome-devtools 是**两个独立 profile**,各自登录态不互通;需在 CloakBrowser 内再登录一次,之后便持久有效。
+
+**安全**:`.browser-profiles/` 已加入 `/workspace/.gitignore`(含登录 cookie,绝不入库)。
+
 ## 6. 数据与资产说明
 
 - `../.uploads/`:迁移期原始数据(Ahrefs/GSC 导出 CSV + ZIP、WordPress `aerogeldirectory` XML 导出),可用于核查数据口径、增量补充名录或文章。
