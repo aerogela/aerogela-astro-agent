@@ -27,3 +27,5 @@ dist/
 .DS_Store
 # CloakBrowser Chromium 缓存(697M,本地化防重置重下载,不入库)
 .tools/browser/cloakbrowser-cache/
+# SEO 监控报告与状态基线(每日定时生成,不入库)
+.tools/browser/reports/
