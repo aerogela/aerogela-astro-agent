@@ -20,6 +20,11 @@ process.env.LD_LIBRARY_PATH = [
   '/workspace/.tools/browser/browser-libs/usr/lib/x86_64-linux-gnu',
   process.env.LD_LIBRARY_PATH,
 ].filter(Boolean).join(':');
+// Chromium 二进制本地化:缓存指向 workspace(跨沙盒重置保留),固定版本禁后台更新
+// (升级时删注释手动: cd cloakbrowser-cache && npx cloakbrowser update)
+process.env.CLOAKBROWSER_CACHE_DIR ??= '/workspace/.tools/browser/cloakbrowser-cache';
+process.env.CLOAKBROWSER_AUTO_UPDATE ??= 'false';
+
 
 const PROFILE_DIR = '/workspace/.browser-profiles/cloakbrowser';
 const targets = process.argv.slice(2).length

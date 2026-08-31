@@ -94,12 +94,14 @@ npx wrangler deploy
 
 1. **CloakBrowser 是唯一承载登录态的浏览器**(GSC + Bing 都在此):
    - 持久化 profile:`/workspace/.browser-profiles/cloakbrowser`(约 58MB,GSC + Bing 登录态)。
-   - 启动器:`node /workspace/.tools/browser/cb-persistent.mjs <url>`(依赖已在 `/workspace/.tools/browser/` 本地安装,node_modules 被 gitignore;CloakBrowser 二进制在 `~/.cloakbrowser/`,沙盒重置后需重新下载 206MB)。
+   - 启动器:`node /workspace/.tools/browser/cb-persistent.mjs <url>`(依赖已在 `/workspace/.tools/browser/` 本地安装,node_modules 被 gitignore)。
    - 内部使用 `launchPersistentContext({ userDataDir: '/workspace/.browser-profiles/cloakbrowser' })`,登录态随 profile 持久化。
+   - **Chromium 已本地化(2026-08-31)**:stealth Chromium(697M,v146.0.7680.177.5)缓存于 `/workspace/.tools/browser/cloakbrowser-cache/`(gitignore),全部脚本已注入 `CLOAKBROWSER_CACHE_DIR` + `CLOAKBROWSER_AUTO_UPDATE=false`。沙盒重置后**零下载**直接启动(此前默认缓存 `~/.cloakbrowser/` 会被重置清掉,每次重置都要静默重下 697M)。升级时手动:`CLOAKBROWSER_CACHE_DIR=/workspace/.tools/browser/cloakbrowser-cache npx cloakbrowser update` 后删旧版本目录。
    - **沙盒重置后恢复(2026-08-31 实测,共两步,约 1 分钟)**:
      1. `bash /workspace/.tools/browser/restore-browser-profiles.sh`(杀残留进程 + 清锁文件 + 校验 cookie;CloakBrowser 直接用持久化路径,无需符号链接)。
      2. `cd /workspace/.tools/browser && npm ci`(**node_modules 也会随沙盒重置丢失**,package.json/lock 已持久化,8 包秒装;漏了这步脚本会报 `Cannot find package 'cloakbrowser'`)。
-     - 系统库无需手动恢复(脚本已自动注入 LD_LIBRARY_PATH);CloakBrowser 专用 Chromium 在 `~/.cloakbrowser/`(本次重置后仍在,若丢失首次 launch 会自动重新下载);备用 Chrome 二进制在 `/workspace/.tools/browser/chrome-linux64/`(随 workspace 持久化)。
+     - 其余无需手动恢复:系统库走脚本自动注入的 LD_LIBRARY_PATH,Chromium 走本地化缓存(见上)。备用 Chrome 二进制在 `/workspace/.tools/browser/chrome-linux64/`。
+     - 若需推送 git 且报权限错误:`bash /workspace/.credentials/restore-credentials.sh`(`~/.ssh/` 也随重置丢失,含 HTTP 代理配置)。
      - 验证:`node /workspace/.tools/browser/gsc-verify.mjs` 免登录直达即环境完整。
 
 2. **登录脚本**(均已内置凭据 + TOTP 自动计算,登录态写入持久化 profile;**已内置 `LD_LIBRARY_PATH` 自动注入**,沙盒重置后无需 shell 层环境变量即可裸跑):

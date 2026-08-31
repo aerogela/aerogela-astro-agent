@@ -25,3 +25,5 @@ dist/
 .wrangler/
 *.log
 .DS_Store
+# CloakBrowser Chromium 缓存(697M,本地化防重置重下载,不入库)
+.tools/browser/cloakbrowser-cache/
