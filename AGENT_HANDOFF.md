@@ -97,9 +97,8 @@ npx wrangler deploy
    - 启动器:`node /workspace/.tools/browser/cb-persistent.mjs <url>`(依赖已在 `/workspace/.tools/browser/` 本地安装,node_modules 被 gitignore)。
    - 内部使用 `launchPersistentContext({ userDataDir: '/workspace/.browser-profiles/cloakbrowser' })`,登录态随 profile 持久化。
    - **Chromium 已本地化(2026-08-31)**:stealth Chromium(697M,v146.0.7680.177.5)缓存于 `/workspace/.tools/browser/cloakbrowser-cache/`(gitignore),全部脚本已注入 `CLOAKBROWSER_CACHE_DIR` + `CLOAKBROWSER_AUTO_UPDATE=false`。沙盒重置后**零下载**直接启动(此前默认缓存 `~/.cloakbrowser/` 会被重置清掉,每次重置都要静默重下 697M)。升级时手动:`CLOAKBROWSER_CACHE_DIR=/workspace/.tools/browser/cloakbrowser-cache npx cloakbrowser update` 后删旧版本目录。
-   - **沙盒重置后恢复(2026-08-31 实测,共两步,约 1 分钟)**:
-     1. `bash /workspace/.tools/browser/restore-browser-profiles.sh`(杀残留进程 + 清锁文件 + 校验 cookie;CloakBrowser 直接用持久化路径,无需符号链接)。
-     2. `cd /workspace/.tools/browser && npm ci`(**node_modules 也会随沙盒重置丢失**,package.json/lock 已持久化,8 包秒装;漏了这步脚本会报 `Cannot find package 'cloakbrowser'`)。
+   - **沙盒重置后恢复(2026-09-01 起一键,实测 2.5 秒,免网络)**:
+     - `bash /workspace/.tools/browser/self-heal.sh` —— 统一自愈入口,按需恢复三样:① node_modules(优先解包 `node_modules.snapshot.tgz` 离线快照,免网络;无快照才回退 `npm ci`;**node_modules 目录虽在 workspace 内但不随重置保留,快照可保留**,依赖变更后需重做快照:`cd /workspace/.tools/browser && tar czf node_modules.snapshot.tgz node_modules`)② 浏览器 profile(内部调 restore-browser-profiles.sh)③ SSH 密钥(内部调 /workspace/.credentials/restore-credentials.sh,失败不阻断)。
      - 其余无需手动恢复:系统库走脚本自动注入的 LD_LIBRARY_PATH,Chromium 走本地化缓存(见上)。备用 Chrome 二进制在 `/workspace/.tools/browser/chrome-linux64/`。
      - 若需推送 git 且报权限错误:`bash /workspace/.credentials/restore-credentials.sh`(`~/.ssh/` 也随重置丢失,含 HTTP 代理配置)。
      - 验证:`node /workspace/.tools/browser/gsc-verify.mjs` 免登录直达即环境完整。
@@ -147,4 +146,4 @@ npx wrangler deploy
 - **产出**: `reports/YYYY-MM-DD-se-monitor.md`(当日报告) + `reports/state.json`(跨次基线,首次已建: GSC 索引 271 / 双平台 sitemap 222 URL)。
 - **判定阈值**: sitemap URL 数 < 200(基线 222 骤降 10%)或状态非成功 → 异常;GSC 已编入索引环比降 > 20% → 异常;登录失效 → 需人工(gsc-login.mjs / bing-login.mjs)。
 - **修复工具**: GSC 重提交 `gsc-sitemap-fix3.mjs`;Bing 重提交 `bing-sitemap-fix.mjs`(新版 UI 无删除功能,旧记录无害)。
-- reports/ 已 gitignore;定时任务 message 内含完整环境自愈流程(npm ci + restore 脚本)。
+- reports/ 已 gitignore;定时任务第一步统一调用 `self-heal.sh`(替代散落的 npm ci + restore 命令),message 内含完整流程。
