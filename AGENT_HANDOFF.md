@@ -141,9 +141,9 @@ npx wrangler deploy
 - 建议的继续方向(示例,按需取舍):扩展/校对 listings 数据、新增 SEO 收录页、优化搜索相关性与分面筛选、监控 sitemap/重定向覆盖、站点性能与 Core Web Vitals 巡检。
 
 接手后建议先在本地 `npm run build` 成功构建并 `npm run dev` 跑通,再开始改动;改动发布走标准 `git commit + push`,部署经 `npx wrangler deploy`。
-## 11. SEO 每日监控(2026-08-31 起)
-- **定时任务**: 每天 09:00(Asia/Shanghai)自动跑 `/workspace/.tools/browser/se-monitor.mjs`,监控 GSC + Bing Webmaster(登录态/sitemap 状态/URL 数/GSC 已编入索引环比)。
-- **产出**: `reports/YYYY-MM-DD-se-monitor.md`(当日报告) + `reports/state.json`(跨次基线,首次已建: GSC 索引 271 / 双平台 sitemap 222 URL)。
+## 11. SEO 监控工具(定时任务已于 2026-09-01 手动删除)
+- **现状**: 平台侧定时任务已删(含 emallsoon 那条),不再自动跑;监控脚本与修复工具**保留**,可手动执行。
+- **手动监控**: `cd /workspace/.tools/browser && node se-monitor.mjs`,采集 GSC + Bing Webmaster(登录态/sitemap 状态/URL 数/GSC 已编入索引环比),产出 `reports/YYYY-MM-DD-se-monitor.md` + `reports/state.json` 跨次基线(基线数据随任务删除已清,重跑自动重建)。
 - **判定阈值**: sitemap URL 数 < 200(基线 222 骤降 10%)或状态非成功 → 异常;GSC 已编入索引环比降 > 20% → 异常;登录失效 → 需人工(gsc-login.mjs / bing-login.mjs)。
 - **修复工具**: GSC 重提交 `gsc-sitemap-fix3.mjs`;Bing 重提交 `bing-sitemap-fix.mjs`(新版 UI 无删除功能,旧记录无害)。
-- reports/ 已 gitignore;定时任务第一步统一调用 `self-heal.sh`(替代散落的 npm ci + restore 命令),message 内含完整流程。
+- reports/ 已 gitignore;手动跑前如遇沙盒重置,先 `bash /workspace/.tools/browser/self-heal.sh` 一键恢复(node_modules 快照/profile/SSH)。
